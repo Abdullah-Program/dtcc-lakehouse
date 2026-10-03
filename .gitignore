@@ -1,0 +1,10 @@
+samples/*
+!samples/.gitkeep
+warehouse/*
+!warehouse/.gitkeep
+.venv/
+__pycache__/
+*.pyc
+.env
+.pytest_cache/
+.ruff_cache/
