@@ -1,0 +1,16 @@
+services:
+  spark:
+    image: apache/spark:4.1.3-scala2.13-java17-python3-r-ubuntu
+    container_name: dtcc_spark
+    working_dir: /workspace
+    environment:
+      - SPARK_LOCAL_IP=127.0.0.1
+      - SPARK_HOME=/opt/spark
+      - PYTHONPATH=/opt/spark/python:/opt/spark/python/lib/py4j-0.10.9.9-src.zip:/workspace
+    volumes:
+      - .:/workspace
+    deploy:
+      resources:
+        limits:
+          memory: 2500M
+    command: ["sleep", "infinity"]
