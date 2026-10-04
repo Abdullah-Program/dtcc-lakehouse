@@ -25,12 +25,12 @@ only in the last phase.
 5 Storage + Polaris | 6 Trino + maintenance lab | 7 CI/CD + ops | 8 Snowflake/Databricks + write-up
 
 ## 4. Current status
-- Phase 0 done. PRs #2, #4, #7, #9, #11, #13, #15, #17, #19, #21, #23, #25 merged to main. Repo is public on GitHub: Abdullah-Program/dtcc-lakehouse.
+- Phase 0 done. PRs #2, #4, #7, #9, #11, #13, #15, #17, #19, #21, #23, #25, #27 merged to main. Repo is public on GitHub: Abdullah-Program/dtcc-lakehouse.
 - Phase 1 (Spark basics) complete: raw CSV validation, Bronze Parquet, and Silver cleaning jobs verified.
 - Phase 2 (Iceberg) complete: Iceberg 1.11.0 runtime, extensions, local catalog, and Silver Iceberg table (local.dtcc.silver_rates) verified.
 - Phase 3 (Trade Corrections Engine) complete: Iceberg SQL MERGE INTO, stateful lifecycle reconciliation (ACTIVE/TERMINATED/CANCELLED), snapshot versioning, and Gold table (local.dtcc.gold_active_trades) verified.
-- Phase 4 (Streaming): Step 4.1 complete (Redpanda Kafka broker deployed, ADR 0003 documented, topic dtcc.rates.raw created).
-- Next: Step 4.2 (streaming producer and PySpark Structured Streaming consumer into Iceberg).
+- Phase 4 (Streaming) complete: Redpanda Kafka broker deployed, lightweight stdlib Kafka producer (ingestion/kafka_producer.py), and PySpark Structured Streaming consumer (spark_jobs/streaming/kafka_to_iceberg.py) appending micro-batches into local.dtcc.silver_rates with snapshot lineage verified.
+- Next: Phase 5 (Storage & Catalog Decoupling: Garage S3 + Apache Polaris REST Catalog).
 
 ## 5. Environment
 - Windows host with 15.7 GB RAM (often 80% in use), 24-thread CPU. WSL2 Ubuntu is capped at about 7.6 GiB.
