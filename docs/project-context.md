@@ -25,9 +25,9 @@ only in the last phase.
 5 Storage + Polaris | 6 Trino + maintenance lab | 7 CI/CD + ops | 8 Snowflake/Databricks + write-up
 
 ## 4. Current status
-- Phase 0 done. PRs #2 and #4 merged to main. Repo is public on GitHub: Abdullah-Program/dtcc-lakehouse.
-- Phase 1, step 1.2 in progress: running spark_jobs/hello_spark.py inside the Spark container.
-- Next: read the cached DTCC zip with Spark, then bronze/silver jobs on about a month of data.
+- Phase 0 done. PRs #2, #4, #7, #9, #11 merged to main. Repo is public on GitHub: Abdullah-Program/dtcc-lakehouse.
+- Phase 1, steps 1.1-1.4 done: Docker Compose PySpark setup, raw CSV validation, and Bronze Parquet ingestion job (load_cumulative.py) completed and verified.
+- Next: Step 1.5 Silver cleaning job (clean_trades.py) on Bronze Parquet.
 
 ## 5. Environment
 - Windows host with 15.7 GB RAM (often 80% in use), 24-thread CPU. WSL2 Ubuntu is capped at about 7.6 GiB.
