@@ -10,6 +10,7 @@ services:
       - PYTHONPATH=/opt/spark/python:/opt/spark/python/lib/py4j-0.10.9.9-src.zip:/workspace
     volumes:
       - .:/workspace
+      - ./.ivy2:/root/.ivy2.5.2
     deploy:
       resources:
         limits:
