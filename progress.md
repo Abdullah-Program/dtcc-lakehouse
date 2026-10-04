@@ -1,13 +1,13 @@
 # Progress
 
 ## Current phase
-Phase 4 (Streaming): Step 4.1 complete (Redpanda Kafka broker deployed in docker-compose.yml with 750M memory limit, ADR 0003 documented, topic dtcc.rates.raw created and verified). Next: Step 4.2 implement streaming producer (ingestion/kafka_producer.py) and PySpark Structured Streaming consumer into Iceberg (spark_jobs/streaming/kafka_to_iceberg.py).
+Phase 4 (Streaming): Complete! Step 4.1 (Redpanda broker deployed with 750M limit, topic dtcc.rates.raw created) and Step 4.2 (ingestion/kafka_producer.py streaming events to Redpanda, spark_jobs/streaming/kafka_to_iceberg.py writing micro-batches into local.dtcc.silver_rates with snapshot commits) verified. Next: Phase 5 (Storage & Catalog Decoupling: Garage S3 + Apache Polaris REST Catalog).
 
 ## Environment (one line)
 Windows host, 15.7 GB RAM (about 12.7 GB already in use at idle), 24-thread CPU; WSL2 Ubuntu capped at 7.6 GiB; Python 3.14.4 in WSL; PySpark 4.1.3 in Docker; repo at D:\programining\dtcc-lakehouse (WSL: /mnt/d/programining/dtcc-lakehouse).
 
 ## What works
-- Repo on GitHub (public), PR workflow with gh CLI, Issues #1, #3, #6, #8, #10, #12, #14, #16, #18, #20, #22, #24, #26 closed via PRs.
+- Repo on GitHub (public), PR workflow with gh CLI, Issues #1, #3, #6, #8, #10, #12, #14, #16, #18, #20, #22, #24, #26, #28 closed via PRs.
 - ingestion/inspect_dtcc.py runs against live DTCC; real schema is in docs/data-notes.md.
 - ingestion/explore_actions.py and explore_chains.py analyse the cached CFTC RATES zip.
 - Docker Compose PySpark service with 2500M RAM cap and spark_jobs/hello_spark.py smoke test verified.
@@ -22,6 +22,8 @@ Windows host, 15.7 GB RAM (about 12.7 GB already in use at idle), 24-thread CPU;
 - spark_jobs/gold/time_travel_demo.py demonstrates Iceberg zero-copy time travel across historical commits.
 - tests/test_corrections.py unit tests verified (lifecycle mapping and window deduplication).
 - Redpanda broker running with 750M limit, verified cluster health and topic dtcc.rates.raw via rpk; docs/adr/0003-redpanda-for-kafka.md documented.
+- ingestion/kafka_producer.py streams live JSON trade events into Redpanda topic dtcc.rates.raw via stdlib rpk pipe.
+- spark_jobs/streaming/kafka_to_iceberg.py consumes Redpanda stream with PySpark Structured Streaming, aligns schema to 117-column Silver table, and commits ACID append snapshots to local.dtcc.silver_rates.
 
 ## Key findings (CFTC RATES, 2026-10-02, 26,840 rows, 110 columns)
 - 6 Action types; ~20% of rows are not NEWT.
