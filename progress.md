@@ -1,13 +1,13 @@
 # Progress
 
 ## Current phase
-Phase 2 (Iceberg) Complete: Step 2.1 (Iceberg 1.11.0 runtime, extensions, local catalog) & Step 2.2 (loaded cleaned Silver data into Iceberg table local.dtcc.silver_rates partitioned by file_date, verified 26,840 rows and snapshot/manifest metadata). Next: Phase 3 (Trade Corrections Engine: Gold layer MERGE INTO and lifecycle reconciliation).
+Phase 3 (Trade Corrections Engine) Complete: implemented spark_jobs/gold/apply_corrections.py with native Iceberg SQL MERGE INTO. Deduplicated 26,840 Silver events to 22,818 unique active trades with lifecycle status (21,402 ACTIVE, 1,069 TERMINATED, 347 CANCELLED). Verified snapshot lineage (append -> overwrite) and state mutation versioning (version 1 -> 2). Unit tests in tests/test_corrections.py verified. Next: Phase 4 (Streaming Ingestion with Redpanda & PySpark Structured Streaming).
 
 ## Environment (one line)
 Windows host, 15.7 GB RAM (about 12.7 GB already in use at idle), 24-thread CPU; WSL2 Ubuntu capped at 7.6 GiB; Python 3.14.4 in WSL; PySpark 4.1.3 in Docker; repo at D:\programining\dtcc-lakehouse (WSL: /mnt/d/programining/dtcc-lakehouse).
 
 ## What works
-- Repo on GitHub (public), PR workflow with gh CLI, Issues #1, #3, #6, #8, #10, #12, #14, #16, #18, #20 closed via PRs.
+- Repo on GitHub (public), PR workflow with gh CLI, Issues #1, #3, #6, #8, #10, #12, #14, #16, #18, #20, #22 closed via PRs.
 - ingestion/inspect_dtcc.py runs against live DTCC; real schema is in docs/data-notes.md.
 - ingestion/explore_actions.py and explore_chains.py analyse the cached CFTC RATES zip.
 - Docker Compose PySpark service with 2500M RAM cap and spark_jobs/hello_spark.py smoke test verified.
@@ -18,6 +18,8 @@ Windows host, 15.7 GB RAM (about 12.7 GB already in use at idle), 24-thread CPU;
 - tests/test_silver_clean.py verified via unittest inside container.
 - spark_jobs/iceberg_smoke_test.py verifies Iceberg 1.11.0 integration, extensions, local catalog, table creation, and snapshot metadata inspection.
 - spark_jobs/silver/load_silver_iceberg.py loads Silver Parquet into local.dtcc.silver_rates Iceberg table partitioned by file_date; verifies 26,840 rows, snapshots, and data files.
+- spark_jobs/gold/apply_corrections.py reconciles trade lifecycles (NEWT/MODI/CORR -> ACTIVE, TERM -> TERMINATED, EROR -> CANCELLED) via Iceberg MERGE INTO with snapshot versioning.
+- tests/test_corrections.py unit tests verified (lifecycle mapping and window deduplication).
 
 ## Key findings (CFTC RATES, 2026-10-02, 26,840 rows, 110 columns)
 - 6 Action types; ~20% of rows are not NEWT.
