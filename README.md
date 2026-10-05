@@ -461,7 +461,9 @@ dtcc-lakehouse/
   - Production runbook documentation ([docs/runbook.md](docs/runbook.md)).
 - [x] **Phase 8: Cloud Interoperability & Portfolio Capstone**
   - Snowflake external catalog federation query specifications ([sql/snowflake/01_polaris_external_catalog.sql](sql/snowflake/01_polaris_external_catalog.sql)).
+  - Streamlit in Snowflake (SiS) live executive financial risk dashboard ([apps/snowflake_streamlit_dashboard.py](apps/snowflake_streamlit_dashboard.py)).
   - Architectural deep dive and transaction concurrency specifications ([docs/architecture.md](docs/architecture.md)).
+  - Technical interview guide and resume talking points ([docs/resume-talking-points.md](docs/resume-talking-points.md)).
 
 ---
 

@@ -23,7 +23,7 @@ jobs:
         run: pip install ruff
 
       - name: Run Ruff Linting
-        run: ruff check . --ignore E501
+        run: ruff check .
 
   test:
     name: Unit & Contract Tests

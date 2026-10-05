@@ -39,7 +39,7 @@ def main():
     spark = get_spark_session(app_name="IcebergRemoveOrphansLab")
 
     # 1. First run as dry_run to safely audit what files would be removed
-    print(f"\n1. Auditing orphan files (dry_run => true)...")
+    print("\n1. Auditing orphan files (dry_run => true)...")
     dry_run_sql = f"""
         CALL {args.catalog}.system.remove_orphan_files(
             table => '{full_table}',
@@ -55,7 +55,7 @@ def main():
 
     # 2. Execute actual purge if not dry_run
     if not args.dry_run and dry_run_results:
-        print(f"\n2. Executing actual purge (dry_run => false)...")
+        print("\n2. Executing actual purge (dry_run => false)...")
         purge_sql = f"""
             CALL {args.catalog}.system.remove_orphan_files(
                 table => '{full_table}',

@@ -129,7 +129,7 @@ def main() -> None:
 
     count = publish_events_to_redpanda(events)
     print(f"Successfully streamed {count} trade events to Redpanda topic '{TOPIC_NAME}'!")
-    print(f"--- Kafka Producer Completed Cleanly ---\n")
+    print("--- Kafka Producer Completed Cleanly ---\n")
 
 
 if __name__ == "__main__":
