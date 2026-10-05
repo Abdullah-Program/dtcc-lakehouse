@@ -30,10 +30,8 @@ only in the last phase.
 - Phase 2 (Iceberg) complete: Iceberg 1.11.0 runtime, extensions, local catalog, and Silver Iceberg table (local.dtcc.silver_rates) verified.
 - Phase 3 (Trade Corrections Engine) complete: Iceberg SQL MERGE INTO, stateful lifecycle reconciliation (ACTIVE/TERMINATED/CANCELLED), snapshot versioning, and Gold table (local.dtcc.gold_active_trades) verified.
 - Phase 4 (Streaming) complete: Redpanda Kafka broker deployed, lightweight stdlib Kafka producer (ingestion/kafka_producer.py), and PySpark Structured Streaming consumer (spark_jobs/streaming/kafka_to_iceberg.py) appending micro-batches into local.dtcc.silver_rates with snapshot lineage verified.
-- Phase 5 (Storage & Catalog Decoupling): Step 5.1 complete (Garage S3 object store deployed with 250M limit, single-node layout configured, dtcc-lakehouse bucket provisioned with dtcc-key credentials, verified via tests/test_garage_s3.py, ADR 0002 documented).
-- Step 5.2 complete (Apache Polaris REST Catalog deployed with 512M limit, dtcc_catalog mapped to s3://dtcc-lakehouse/, PySpark dual-catalog configuration local Hadoop + polaris REST with S3FileIO verified via spark_jobs/polaris_smoke_test.py, ADR 0004 documented).
-- Step 5.3 complete (Migrated Silver and Gold Iceberg tables and PySpark Structured Streaming pipeline to Garage S3 + Polaris REST catalog; verified micro-batch append to polaris.dtcc.silver_rates and MERGE INTO on polaris.dtcc.gold_active_trades).
-- Next: Create PR for Issue #38 and advance to Phase 6 (Trino Query Engine & Table Maintenance Lab).
+- Phase 5 (Storage & Catalog Decoupling) complete: Garage S3 (250M limit, dtcc-lakehouse bucket) + Apache Polaris REST Catalog (512M limit, dtcc_catalog mapped to S3). Silver, Gold, and PySpark streaming pipeline migrated to S3 + Polaris REST catalog. Verified batch load, streaming append, MERGE INTO corrections, and zero-copy time travel. PR #39 merged to main, closing Issue #38.
+- Next: Advance to Phase 6 (Trino Query Engine & Table Maintenance Lab).
 
 ## 5. Environment
 - Windows host with 15.7 GB RAM (often 80% in use), 24-thread CPU. WSL2 Ubuntu is capped at about 7.6 GiB.
