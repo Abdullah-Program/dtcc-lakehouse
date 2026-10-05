@@ -1,13 +1,15 @@
 # Progress
 
 ## Current phase
-Phase 7 (CI/CD, Monitoring & Ops): Tracking Issue #42 on branch feature/phase7-cicd-ops.
+Phase 8 (Cloud Interoperability & Portfolio Capstone): Completed (Tracking Issue #44 on branch feature/phase8-capstone-writeup).
 - Completed:
-  1. Automated GitHub Actions CI workflow implemented in `.github/workflows/ci.yml` (runs `ruff` code formatting/linting and PySpark `pytest` suites on push/PR to `main`).
-  2. Implemented `tests/test_schemas.py` establishing data contracts for Bronze, Silver, and Gold layers; all 8 unit tests pass cleanly inside Docker.
-  3. Created operational infrastructure health check script `scripts/healthcheck.sh` verifying end-to-end status of all 5 services (Redpanda, Garage S3, Polaris REST, Trino, Spark).
-  4. Authored comprehensive operational runbook in `docs/runbook.md` detailing service orchestration, port mappings, pipeline run commands, and maintenance routines.
-- Next: Commit Phase 7, open PR for Issue #42, merge into main, and transition to Phase 8 (Portfolio Capstone & Architecture Documentation).
+  - All 8 Phases (Phases 0 through 8) are 100% complete and verified.
+  - Multi-engine architecture operational: PySpark 4.1 + Trino 483 + Apache Polaris REST Catalog + Garage S3 + Redpanda Streaming.
+  - Snowflake external catalog federation queries documented in `sql/snowflake/01_polaris_external_catalog.sql`.
+  - Authored comprehensive architectural deep-dive report in `docs/architecture.md`.
+  - Authored Data Engineering Resume & Interview Guide in `docs/resume-talking-points.md`.
+  - Polished master `README.md` with badges, verified runbooks, and benchmark results.
+- Next: Open PR for Issue #44, merge into main, and celebrate complete project delivery! 🎉
 
 ## Environment (one line)
 Windows host, 15.7 GB RAM (about 12.7 GB already in use at idle), 24-thread CPU; WSL2 Ubuntu capped at 7.6 GiB; Python 3.14.4 in WSL; PySpark 4.1.3 in Docker; repo at D:\programining\dtcc-lakehouse (WSL: /mnt/d/programining/dtcc-lakehouse).

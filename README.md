@@ -2,9 +2,11 @@
 
 [![Apache Spark](https://img.shields.io/badge/Apache%20Spark-4.1.3-E25A1C?logo=apachespark&logoColor=white)](https://spark.apache.org/)
 [![Apache Iceberg](https://img.shields.io/badge/Apache%20Iceberg-1.11.0-blue?logo=apache&logoColor=white)](https://iceberg.apache.org/)
+[![Apache Polaris](https://img.shields.io/badge/Apache%20Polaris-REST%20Catalog-0052CC?logo=apache&logoColor=white)](https://polaris.apache.org/)
+[![Garage S3](https://img.shields.io/badge/Garage%20S3-Object%20Storage-orange?logo=amazons3&logoColor=white)](https://garagehq.deuxfleurs.fr/)
+[![Trino](https://img.shields.io/badge/Trino-483%20MPP-DD00A1?logo=trino&logoColor=white)](https://trino.io/)
 [![Redpanda](https://img.shields.io/badge/Redpanda-Kafka%20Streaming-red?logo=redpanda&logoColor=white)](https://redpanda.com/)
-[![Python](https://img.shields.io/badge/Python-3.14%20%7C%203.10-3776AB?logo=python&logoColor=white)](https://www.python.org/)
-[![Docker](https://img.shields.io/badge/Docker%20Compose-Desktop%20%2B%20WSL2-2496ED?logo=docker&logoColor=white)](https://www.docker.com/)
+[![CI](https://github.com/Abdullah-Program/dtcc-lakehouse/actions/workflows/ci.yml/badge.svg)](https://github.com/Abdullah-Program/dtcc-lakehouse/actions)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 An enterprise-grade, open-source financial lakehouse built from scratch to ingest, standardize, audit, stream, and reconcile live public derivatives trade records from the **Depository Trust & Clearing Corporation (DTCC)**.
@@ -444,14 +446,22 @@ dtcc-lakehouse/
   - Deployed resource-capped Redpanda Kafka broker with topic `dtcc.rates.raw` ([docker-compose.yml](docker-compose.yml)).
   - Built stdlib streaming producer ([ingestion/kafka_producer.py](ingestion/kafka_producer.py)).
   - Built PySpark Structured Streaming consumer with dynamic schema alignment into Iceberg ([spark_jobs/streaming/kafka_to_iceberg.py](spark_jobs/streaming/kafka_to_iceberg.py)).
-- [ ] **Phase 5: Storage & Catalog Decoupling**
-  - Deploy Garage S3 and Apache Polaris REST catalog.
-- [ ] **Phase 6: Trino & The Iceberg Maintenance Lab**
-  - Query Iceberg tables via Trino; benchmark compaction, snapshot expiration, and orphan cleanup.
-- [ ] **Phase 7: CI/CD & Production Observability**
-  - Automated GitHub Actions test suites and Prometheus/Grafana pipeline monitoring.
-- [ ] **Phase 8: Cloud Expansion & Portfolio Write-Up**
-  - Snowflake External Iceberg table integration and technical project presentation.
+- [x] **Phase 5: Storage & Catalog Decoupling**
+  - Deployed Garage S3 object store with `dtcc-lakehouse` bucket ([tests/test_garage_s3.py](tests/test_garage_s3.py), [docs/adr/0002-garage-instead-of-minio.md](docs/adr/0002-garage-instead-of-minio.md)).
+  - Deployed Apache Polaris REST catalog with OAuth2 governance ([docs/adr/0004-polaris-for-iceberg-rest-catalog.md](docs/adr/0004-polaris-for-iceberg-rest-catalog.md)).
+  - Migrated Silver & Gold Iceberg tables to Garage S3 (`s3://dtcc-lakehouse/`) using `S3FileIO`.
+- [x] **Phase 6: Trino Federation & The Iceberg Table Maintenance Lab**
+  - Deployed Trino 483 MPP engine with Web UI ([http://localhost:8080](http://localhost:8080)) and REST catalog integration ([docs/adr/0005-trino-for-interactive-query-engine.md](docs/adr/0005-trino-for-interactive-query-engine.md)).
+  - Interactive financial risk analytics across $100B+ active swaps ([sql/trino/02_financial_risk_summary.sql](sql/trino/02_financial_risk_summary.sql)).
+  - Table Maintenance Lab: 50% small file reduction via compaction, 4 snapshots pruned via expiration, and orphan S3 sweeps ([docs/maintenance-lab.md](docs/maintenance-lab.md)).
+- [x] **Phase 7: CI/CD, Monitoring & Ops**
+  - Automated GitHub Actions CI workflow ([.github/workflows/ci.yml](.github/workflows/ci.yml)) running `ruff` linting and PySpark `pytest` suites.
+  - Data contracts test suite asserting schema rules ([tests/test_schemas.py](tests/test_schemas.py)).
+  - Automated infrastructure health check script ([scripts/healthcheck.sh](scripts/healthcheck.sh)).
+  - Production runbook documentation ([docs/runbook.md](docs/runbook.md)).
+- [x] **Phase 8: Cloud Interoperability & Portfolio Capstone**
+  - Snowflake external catalog federation query specifications ([sql/snowflake/01_polaris_external_catalog.sql](sql/snowflake/01_polaris_external_catalog.sql)).
+  - Architectural deep dive and transaction concurrency specifications ([docs/architecture.md](docs/architecture.md)).
 
 ---
 
@@ -466,9 +476,9 @@ All operations execute inside resource-constrained Docker containers to isolate 
 ### 2. Start the Infrastructure Services
 ```bash
 docker compose up -d
-docker compose ps
+bash scripts/healthcheck.sh
 ```
-*(Runs `dtcc_spark` capped at 2500M, `dtcc_redpanda` capped at 750M, `dtcc_garage` S3 capped at 250M, and `dtcc_polaris` REST Catalog capped at 512M)*.
+*(Runs `dtcc_spark` capped at 2500M, `dtcc_redpanda` capped at 750M, `dtcc_garage` capped at 250M, `dtcc_polaris` capped at 512M, and `dtcc_trino` capped at 1500M)*.
 
 ### 3. Run the Batch Medallion Pipeline (Decoupled S3 + Polaris REST)
 ```bash
@@ -487,7 +497,6 @@ docker compose exec spark python3 /workspace/spark_jobs/gold/apply_corrections.p
 # 5. Run the Zero-Copy Time Travel Demonstration
 docker compose exec spark python3 /workspace/spark_jobs/gold/time_travel_demo.py --catalog polaris
 ```
-*(Note: To run against the legacy local Hadoop catalog instead, substitute `--catalog local`)*.
 
 ### 4. Run the Real-Time Streaming Pipeline
 ```bash
@@ -498,13 +507,28 @@ python3 ingestion/kafka_producer.py
 docker compose exec spark python3 /workspace/spark_jobs/streaming/kafka_to_iceberg.py --catalog polaris
 ```
 
-### 5. Verify Garage S3 Object Store
+### 5. Interactive Querying in Trino
 ```bash
-# Inspect bucket size and object count
-docker compose exec garage /garage bucket info dtcc-lakehouse
+# Show all discovered Iceberg tables
+docker compose exec trino trino --execute "SHOW TABLES FROM polaris.dtcc;"
+
+# Run financial risk aggregations
+docker compose exec -T trino trino < sql/trino/02_financial_risk_summary.sql
 ```
 
-### 6. Run Automated Unit Tests
+### 6. Run Iceberg Table Maintenance
+```bash
+# 1. Compact small files (Bin-packing)
+docker compose exec spark python3 /workspace/spark_jobs/maintenance/compact_files.py --catalog polaris --table dtcc.silver_rates
+
+# 2. Expire old snapshots (Retain last 2)
+docker compose exec spark python3 /workspace/spark_jobs/maintenance/expire_snapshots.py --catalog polaris --table dtcc.gold_active_trades --retain-last 2
+
+# 3. Sweep unreferenced orphan files from Garage S3
+docker compose exec -T trino trino < sql/trino/04_maintenance.sql
+```
+
+### 7. Run Automated Test Suite
 ```bash
 docker compose exec spark python3 -m unittest discover -s /workspace/tests -p "test_*.py"
 ```

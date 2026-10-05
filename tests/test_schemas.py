@@ -6,8 +6,6 @@ from pyspark.sql.types import (
     DoubleType,
     IntegerType,
     StringType,
-    StructField,
-    StructType,
     TimestampType,
 )
 

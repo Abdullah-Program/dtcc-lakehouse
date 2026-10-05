@@ -1,0 +1,22 @@
+[project]
+name = "dtcc-lakehouse"
+version = "0.1.0"
+description = "Financial Data Lakehouse built on DTCC swap trades using PySpark, Apache Iceberg, Apache Polaris, and Trino."
+readme = "README.md"
+requires-python = ">=3.10"
+
+[tool.ruff]
+line-length = 120
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F"]
+ignore = [
+    "E501",   # line length handled flexibly
+    "EXE001",  # shebang in test scripts
+    "E402",   # module level import not at top of file
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
