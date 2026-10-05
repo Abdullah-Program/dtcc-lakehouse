@@ -89,6 +89,9 @@ def merge_into_gold(spark, silver_table: str, gold_table: str) -> None:
     """Execute Iceberg SQL MERGE INTO to reconcile latest trade states directly from Silver."""
     create_gold_table_if_not_exists(spark, gold_table)
 
+    # Purge any invalid null trade_key rows
+    spark.sql(f"DELETE FROM {gold_table} WHERE trade_key IS NULL")
+
     # Use pure Iceberg SQL subquery to allow Catalyst to plan the v2 Iceberg source natively
     merge_sql = f"""
         MERGE INTO {gold_table} AS target
@@ -120,6 +123,7 @@ def merge_into_gold(spark, silver_table: str, gold_table: str) -> None:
                         ORDER BY dissemination_identifier DESC
                     ) as rn
                 FROM {silver_table}
+                WHERE trade_key IS NOT NULL AND trade_key != ''
             ) WHERE rn = 1
         ) AS source
         ON target.trade_key = source.trade_key
@@ -207,8 +211,13 @@ def main() -> None:
 
     # 2. Compute unique trade keys count for verification
     print("2. Deduplicating to latest event per trade_key...")
-    unique_trades_count = df_silver.select("trade_key").distinct().count()
-    print(f"Found {unique_trades_count:,} unique trade keys across Silver.")
+    unique_trades_count = (
+        df_silver.filter(F.col("trade_key").isNotNull() & (F.col("trade_key") != ""))
+        .select("trade_key")
+        .distinct()
+        .count()
+    )
+    print(f"Found {unique_trades_count:,} unique valid trade keys across Silver.")
 
     # 3. Apply MERGE INTO against Gold Iceberg table
     print(f"3. Applying MERGE INTO against {gold_table}...")

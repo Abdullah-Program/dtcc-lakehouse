@@ -19,7 +19,8 @@ SECRET_KEY = os.getenv(
     "AWS_SECRET_ACCESS_KEY",
     "8ebd487cc54261411c33d336465f8a26ba58c064bddb3c56692189b2b4a21eba",
 )
-S3_ENDPOINT = os.getenv("AWS_ENDPOINT_URL", "http://127.0.0.1:3900")
+DEFAULT_ENDPOINT = "http://garage:3900" if os.path.exists("/.dockerenv") else "http://127.0.0.1:3900"
+S3_ENDPOINT = os.getenv("AWS_ENDPOINT_URL", DEFAULT_ENDPOINT)
 S3_REGION = os.getenv("AWS_REGION", "garage")
 BUCKET_NAME = "dtcc-lakehouse"
 

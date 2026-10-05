@@ -8,12 +8,31 @@ Stdlib only: streams via Redpanda rpk CLI pipe (zero pip dependencies required).
 """
 import json
 from pathlib import Path
+import shutil
 import subprocess
 import sys
 
 SAMPLES_DIR = Path(__file__).resolve().parents[1] / "samples"
 TICKER_JSON = SAMPLES_DIR / "Ticker.json"
 TOPIC_NAME = "dtcc.rates.raw"
+
+
+def get_docker_cmd() -> str:
+    """Find a functional Docker CLI (checks 'docker' first, falls back to 'docker.exe')."""
+    for candidate in ["docker", "docker.exe"]:
+        if shutil.which(candidate):
+            try:
+                res = subprocess.run(
+                    [candidate, "version"],
+                    stdout=subprocess.DEVNULL,
+                    stderr=subprocess.DEVNULL,
+                    timeout=3,
+                )
+                if res.returncode == 0:
+                    return candidate
+            except Exception:
+                continue
+    return "docker"
 
 
 def load_ticker_events() -> list:
@@ -72,9 +91,9 @@ def standardize_ticker_event(raw: dict) -> dict:
 
 def publish_events_to_redpanda(events: list) -> int:
     """Stream standardized events into Redpanda via rpk topic produce pipe."""
-    # Launch rpk producer process accepting '%k:%v\n' format
+    docker_bin = get_docker_cmd()
     cmd = [
-        "docker", "compose", "exec", "-T", "redpanda",
+        docker_bin, "compose", "exec", "-T", "redpanda",
         "rpk", "topic", "produce", TOPIC_NAME,
         "-f", "%k:%v\n",
     ]
@@ -88,23 +107,20 @@ def publish_events_to_redpanda(events: list) -> int:
         text=True,
     )
 
-    published = 0
+    lines = []
     for raw in events:
         clean = standardize_ticker_event(raw)
         key = clean["trade_key"]
         payload = json.dumps(clean)
-        # Write formatted key:value line to producer STDIN
-        proc.stdin.write(f"{key}:{payload}\n")
-        published += 1
+        lines.append(f"{key}:{payload}")
 
-    proc.stdin.close()
-    proc.wait()
+    input_data = "\n".join(lines) + "\n"
+    stdout, stderr = proc.communicate(input=input_data)
 
     if proc.returncode != 0:
-        err = proc.stderr.read()
-        raise RuntimeError(f"Redpanda produce failed (code {proc.returncode}): {err}")
+        raise RuntimeError(f"Redpanda produce failed (code {proc.returncode}): {stderr}")
 
-    return published
+    return len(events)
 
 
 def main() -> None:

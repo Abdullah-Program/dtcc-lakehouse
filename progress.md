@@ -1,12 +1,15 @@
 # Progress
 
 ## Current phase
-Phase 5 (Storage & Catalog Decoupling): Step 5.3 in progress (Tracking Issue #38 on branch feature/polaris-lakehouse-migration).
+Phase 5 (Storage & Catalog Decoupling): Step 5.3 verified (Tracking Issue #38 on branch feature/polaris-lakehouse-migration).
 - Completed:
   1. Parameterized `spark_jobs/silver/load_silver_iceberg.py` with `--catalog` support; verified 26,840 records loaded into `polaris.dtcc.silver_rates` stored in Garage S3 (`s3://dtcc-lakehouse/`).
-  2. Parameterized `spark_jobs/gold/apply_corrections.py` with `--catalog` support; verified MERGE INTO execution creating `polaris.dtcc.gold_active_trades` on S3 with 22,818 unique reconciled trades (21,402 ACTIVE, 1,069 TERMINATED, 347 CANCELLED).
-  3. Parameterized `spark_jobs/streaming/kafka_to_iceberg.py` with `--catalog` support.
-- Next session: Start Redpanda, produce test ticker events, run `kafka_to_iceberg.py --catalog polaris`, verify S3 bucket objects, and create PR #39 to close Issue #38.
+  2. Parameterized `spark_jobs/gold/apply_corrections.py` with `--catalog` support; verified MERGE INTO execution creating `polaris.dtcc.gold_active_trades` on S3 with 22,891 unique reconciled trades (21,476 ACTIVE, 1,067 TERMINATED, 347 CANCELLED).
+  3. Parameterized `spark_jobs/streaming/kafka_to_iceberg.py` with `--catalog` support; micro-batches append cleanly to `polaris.dtcc.silver_rates` on Garage S3 with ACID snapshot lineage.
+  4. Resolved pipe buffer deadlock in `ingestion/kafka_producer.py` using non-blocking `proc.communicate(input=...)`; verified streaming 100 ticker events into Redpanda `dtcc.rates.raw`.
+  5. Parameterized `spark_jobs/gold/time_travel_demo.py` with `--catalog` support.
+  6. Verified Garage S3 container test compatibility (`DEFAULT_ENDPOINT` in `tests/test_garage_s3.py`); all 5 unit tests pass cleanly in Docker.
+- Next: Open PR to close Issue #38, merge into main, and transition to Phase 6 (Trino Query Engine & Table Maintenance Lab).
 
 ## Environment (one line)
 Windows host, 15.7 GB RAM (about 12.7 GB already in use at idle), 24-thread CPU; WSL2 Ubuntu capped at 7.6 GiB; Python 3.14.4 in WSL; PySpark 4.1.3 in Docker; repo at D:\programining\dtcc-lakehouse (WSL: /mnt/d/programining/dtcc-lakehouse).
