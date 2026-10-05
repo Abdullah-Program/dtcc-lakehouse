@@ -1,13 +1,13 @@
 # Progress
 
 ## Current phase
-Phase 4 (Streaming): Complete! Step 4.1 (Redpanda broker deployed with 750M limit, topic dtcc.rates.raw created) and Step 4.2 (ingestion/kafka_producer.py streaming events to Redpanda, spark_jobs/streaming/kafka_to_iceberg.py writing micro-batches into local.dtcc.silver_rates with snapshot commits) verified. Next: Phase 5 (Storage & Catalog Decoupling: Garage S3 + Apache Polaris REST Catalog).
+Phase 5 (Storage & Catalog Decoupling): Step 5.1 complete (Garage S3 object storage service deployed in docker-compose.yml with 250M memory limit, single-node layout configured, S3 credentials dtcc-key generated, dtcc-lakehouse bucket provisioned, S3 SigV4 automated test in tests/test_garage_s3.py verified, ADR 0002 documented). Next: Step 5.2 (Apache Polaris REST Catalog setup & PySpark S3 + Polaris integration).
 
 ## Environment (one line)
 Windows host, 15.7 GB RAM (about 12.7 GB already in use at idle), 24-thread CPU; WSL2 Ubuntu capped at 7.6 GiB; Python 3.14.4 in WSL; PySpark 4.1.3 in Docker; repo at D:\programining\dtcc-lakehouse (WSL: /mnt/d/programining/dtcc-lakehouse).
 
 ## What works
-- Repo on GitHub (public), PR workflow with gh CLI, Issues #1, #3, #6, #8, #10, #12, #14, #16, #18, #20, #22, #24, #26, #28 closed via PRs.
+- Repo on GitHub (public), PR workflow with gh CLI, Issues #1, #3, #6, #8, #10, #12, #14, #16, #18, #20, #22, #24, #26, #28, #30, #32 closed via PRs.
 - ingestion/inspect_dtcc.py runs against live DTCC; real schema is in docs/data-notes.md.
 - ingestion/explore_actions.py and explore_chains.py analyse the cached CFTC RATES zip.
 - Docker Compose PySpark service with 2500M RAM cap and spark_jobs/hello_spark.py smoke test verified.
@@ -24,6 +24,7 @@ Windows host, 15.7 GB RAM (about 12.7 GB already in use at idle), 24-thread CPU;
 - Redpanda broker running with 750M limit, verified cluster health and topic dtcc.rates.raw via rpk; docs/adr/0003-redpanda-for-kafka.md documented.
 - ingestion/kafka_producer.py streams live JSON trade events into Redpanda topic dtcc.rates.raw via stdlib rpk pipe.
 - spark_jobs/streaming/kafka_to_iceberg.py consumes Redpanda stream with PySpark Structured Streaming, aligns schema to 117-column Silver table, and commits ACID append snapshots to local.dtcc.silver_rates.
+- Garage S3 object store running in Docker with 250M limit, single-node layout active, dtcc-lakehouse bucket provisioned with dtcc-key credentials, verified via tests/test_garage_s3.py (PUT/GET/LIST); docs/adr/0002-garage-instead-of-minio.md documented.
 
 ## Key findings (CFTC RATES, 2026-10-02, 26,840 rows, 110 columns)
 - 6 Action types; ~20% of rows are not NEWT.

@@ -38,3 +38,24 @@ services:
       resources:
         limits:
           memory: 750M
+
+  garage:
+    image: dxflrs/garage:v2.4.1
+    container_name: dtcc_garage
+    command: ["/garage", "-c", "/etc/garage.toml", "server"]
+    ports:
+      - "3900:3900"
+      - "3902:3902"
+      - "3903:3903"
+    volumes:
+      - ./infra/garage/garage.toml:/etc/garage.toml:ro
+      - garage_meta:/var/lib/garage/meta
+      - garage_data:/var/lib/garage/data
+    deploy:
+      resources:
+        limits:
+          memory: 250M
+
+volumes:
+  garage_meta:
+  garage_data:
