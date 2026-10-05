@@ -1,15 +1,17 @@
 # Progress
 
 ## Current phase
-Phase 5 (Storage & Catalog Decoupling): Step 5.3 verified (Tracking Issue #38 on branch feature/polaris-lakehouse-migration).
+Phase 6 (Trino Query Engine & Table Maintenance Lab): Steps 6.1, 6.2, and 6.3 verified (Tracking Issue #40 on branch feature/phase6-trino-maintenance-lab).
 - Completed:
-  1. Parameterized `spark_jobs/silver/load_silver_iceberg.py` with `--catalog` support; verified 26,840 records loaded into `polaris.dtcc.silver_rates` stored in Garage S3 (`s3://dtcc-lakehouse/`).
-  2. Parameterized `spark_jobs/gold/apply_corrections.py` with `--catalog` support; verified MERGE INTO execution creating `polaris.dtcc.gold_active_trades` on S3 with 22,891 unique reconciled trades (21,476 ACTIVE, 1,067 TERMINATED, 347 CANCELLED).
-  3. Parameterized `spark_jobs/streaming/kafka_to_iceberg.py` with `--catalog` support; micro-batches append cleanly to `polaris.dtcc.silver_rates` on Garage S3 with ACID snapshot lineage.
-  4. Resolved pipe buffer deadlock in `ingestion/kafka_producer.py` using non-blocking `proc.communicate(input=...)`; verified streaming 100 ticker events into Redpanda `dtcc.rates.raw`.
-  5. Parameterized `spark_jobs/gold/time_travel_demo.py` with `--catalog` support.
-  6. Verified Garage S3 container test compatibility (`DEFAULT_ENDPOINT` in `tests/test_garage_s3.py`); all 5 unit tests pass cleanly in Docker.
-- Next: Open PR to close Issue #38, merge into main, and transition to Phase 6 (Trino Query Engine & Table Maintenance Lab).
+  1. Deployed Trino 483 in Docker Compose (`dtcc_trino`) with strict memory cap (1500M container limit, `-Xmx1024M` JVM heap, G1GC tuning); Web UI active on `http://localhost:8080`.
+  2. Integrated Trino with Apache Polaris REST Catalog and Garage S3 (`infra/trino/catalog/polaris.properties`); verified discovery of `dtcc.silver_rates`, `dtcc.gold_active_trades`, and `dtcc.smoke_rates`.
+  3. Executed financial analytics SQL queries via Trino (`sql/trino/`): active notional risk by asset class ($100B+ across 21,476 IR trades), currency distribution, snapshot metadata audits, and zero-copy time travel (`FOR VERSION AS OF`).
+  4. Implemented Table Maintenance Lab:
+     - `spark_jobs/maintenance/compact_files.py`: Cut small data files by 50% (6 -> 3 files) and increased average file size by 86.5% on `silver_rates`.
+     - `spark_jobs/maintenance/expire_snapshots.py`: Purged 4 stale snapshots, 7 manifests, 4 manifest lists, and 4 obsolete data files on `gold_active_trades` (retained last 2).
+     - `spark_jobs/maintenance/remove_orphans.py` & `sql/trino/04_maintenance.sql`: Audited 22 storage objects on Garage S3 with a 7-day retention safety threshold.
+  5. Documented ADR 0005 (`docs/adr/0005-trino-for-interactive-query-engine.md`) and comprehensive benchmark report (`docs/maintenance-lab.md`).
+- Next: Open PR for Issue #40, merge into main, and transition to Phase 7 (CI/CD, Monitoring & Ops).
 
 ## Environment (one line)
 Windows host, 15.7 GB RAM (about 12.7 GB already in use at idle), 24-thread CPU; WSL2 Ubuntu capped at 7.6 GiB; Python 3.14.4 in WSL; PySpark 4.1.3 in Docker; repo at D:\programining\dtcc-lakehouse (WSL: /mnt/d/programining/dtcc-lakehouse).
