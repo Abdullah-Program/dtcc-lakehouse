@@ -1,7 +1,12 @@
 # Progress
 
 ## Current phase
-Phase 5 (Storage & Catalog Decoupling): Step 5.2 complete (Apache Polaris Iceberg REST catalog deployed in docker-compose.yml with 512M memory limit, catalog dtcc_catalog bootstrapped pointing to s3://dtcc-lakehouse/, PySpark configured with dual catalogs local and polaris with iceberg-aws-bundle and S3FileIO, end-to-end integration verified in spark_jobs/polaris_smoke_test.py, ADR 0004 documented). Next: Step 5.3 (Migrate Silver Iceberg table and streaming pipelines to S3 + Polaris).
+Phase 5 (Storage & Catalog Decoupling): Step 5.3 in progress (Tracking Issue #38 on branch feature/polaris-lakehouse-migration).
+- Completed:
+  1. Parameterized `spark_jobs/silver/load_silver_iceberg.py` with `--catalog` support; verified 26,840 records loaded into `polaris.dtcc.silver_rates` stored in Garage S3 (`s3://dtcc-lakehouse/`).
+  2. Parameterized `spark_jobs/gold/apply_corrections.py` with `--catalog` support; verified MERGE INTO execution creating `polaris.dtcc.gold_active_trades` on S3 with 22,818 unique reconciled trades (21,402 ACTIVE, 1,069 TERMINATED, 347 CANCELLED).
+  3. Parameterized `spark_jobs/streaming/kafka_to_iceberg.py` with `--catalog` support.
+- Next session: Start Redpanda, produce test ticker events, run `kafka_to_iceberg.py --catalog polaris`, verify S3 bucket objects, and create PR #39 to close Issue #38.
 
 ## Environment (one line)
 Windows host, 15.7 GB RAM (about 12.7 GB already in use at idle), 24-thread CPU; WSL2 Ubuntu capped at 7.6 GiB; Python 3.14.4 in WSL; PySpark 4.1.3 in Docker; repo at D:\programining\dtcc-lakehouse (WSL: /mnt/d/programining/dtcc-lakehouse).

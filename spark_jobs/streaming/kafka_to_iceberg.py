@@ -5,6 +5,8 @@ Consumes real-time trade messages from Redpanda topic 'dtcc.rates.raw',
 parses JSON payloads, sanitizes notional amounts, types timestamps,
 aligns schema against target Iceberg Silver table, and appends micro-batches.
 """
+import argparse
+import sys
 from pyspark.sql import DataFrame
 from pyspark.sql import functions as F
 from pyspark.sql import types as T
@@ -12,8 +14,18 @@ from spark_jobs.common.spark_session import get_spark_session
 
 KAFKA_BOOTSTRAP = "redpanda:29092"
 TOPIC_NAME = "dtcc.rates.raw"
-TARGET_TABLE = "local.dtcc.silver_rates"
-CHECKPOINT_DIR = "/workspace/warehouse/checkpoints/streaming_silver"
+
+
+def parse_args():
+    parser = argparse.ArgumentParser(description="Streaming from Kafka to Apache Iceberg")
+    parser.add_argument(
+        "--catalog",
+        choices=["polaris", "local"],
+        default="polaris",
+        help="Iceberg catalog to target (polaris REST or local Hadoop)",
+    )
+    return parser.parse_args()
+
 
 # Schema for incoming JSON payloads published by kafka_producer.py
 TICKER_PAYLOAD_SCHEMA = T.StructType([
@@ -59,35 +71,44 @@ def clean_streaming_events(df: DataFrame) -> DataFrame:
     )
 
 
-def process_micro_batch(batch_df: DataFrame, batch_id: int) -> None:
-    """Process each streaming micro-batch, align schema, and append to Iceberg."""
-    if batch_df.isEmpty():
-        return
+def make_micro_batch_processor(target_table: str):
+    """Factory creating micro-batch processor targeting a specific Iceberg table."""
+    def process_micro_batch(batch_df: DataFrame, batch_id: int) -> None:
+        if batch_df.isEmpty():
+            return
 
-    batch_count = batch_df.count()
-    print(f"Processing micro-batch {batch_id} with {batch_count:,} streaming events...")
+        batch_count = batch_df.count()
+        print(f"Processing micro-batch {batch_id} with {batch_count:,} streaming events...")
 
-    spark = batch_df.sparkSession
-    # Align incoming streaming columns to the full 117-column Iceberg Silver table schema
-    target_empty_df = spark.table(TARGET_TABLE).limit(0)
-    aligned_df = target_empty_df.unionByName(batch_df, allowMissingColumns=True)
+        spark = batch_df.sparkSession
+        # Align incoming streaming columns to the full 117-column Iceberg Silver table schema
+        target_empty_df = spark.table(target_table).limit(0)
+        aligned_df = target_empty_df.unionByName(batch_df, allowMissingColumns=True)
 
-    # Append aligned micro-batch to Iceberg table with ACID transaction
-    aligned_df.writeTo(TARGET_TABLE).append()
-    print(f"Micro-batch {batch_id} appended successfully into {TARGET_TABLE}.")
+        # Append aligned micro-batch to Iceberg table with ACID transaction
+        aligned_df.writeTo(target_table).append()
+        print(f"Micro-batch {batch_id} appended successfully into {target_table}.")
+
+    return process_micro_batch
 
 
 def main() -> None:
-    print(f"\n--- Starting Structured Streaming: Redpanda ({TOPIC_NAME}) -> Iceberg ({TARGET_TABLE}) ---")
+    args = parse_args()
+    catalog = args.catalog
+    target_table = f"{catalog}.dtcc.silver_rates"
+    checkpoint_dir = f"/workspace/warehouse/checkpoints/streaming_silver_{catalog}"
+
+    print(f"\n--- Starting Structured Streaming: Redpanda ({TOPIC_NAME}) -> Iceberg ({target_table}) ---")
     spark = get_spark_session(
-        app_name="DTCC-Streaming-KafkaToIceberg",
+        app_name=f"DTCC-Streaming-KafkaToIceberg-{catalog}",
         enable_iceberg=True,
         enable_kafka=True,
+        enable_polaris=(catalog == "polaris"),
     )
 
     # Record initial table row count before streaming
-    initial_count = spark.table(TARGET_TABLE).count()
-    print(f"Pre-streaming row count in {TARGET_TABLE}: {initial_count:,}")
+    initial_count = spark.table(target_table).count()
+    print(f"Pre-streaming row count in {target_table}: {initial_count:,}")
 
     # 1. Read Stream from Kafka / Redpanda
     print(f"1. Connecting to Redpanda at {KAFKA_BOOTSTRAP}, subscribing to '{TOPIC_NAME}'...")
@@ -108,12 +129,13 @@ def main() -> None:
     df_stream_clean = clean_streaming_events(df_parsed)
 
     # 3. Stream micro-batches to Apache Iceberg table using availableNow trigger
-    print(f"3. Streaming micro-batches to Iceberg table '{TARGET_TABLE}'...")
+    print(f"3. Streaming micro-batches to Iceberg table '{target_table}'...")
+    process_batch = make_micro_batch_processor(target_table)
     query = (
         df_stream_clean.writeStream
-        .foreachBatch(process_micro_batch)
+        .foreachBatch(process_batch)
         .trigger(availableNow=True)
-        .option("checkpointLocation", CHECKPOINT_DIR)
+        .option("checkpointLocation", checkpoint_dir)
         .start()
     )
 
@@ -122,9 +144,9 @@ def main() -> None:
     print("Streaming micro-batch execution complete.")
 
     # 4. Verify post-streaming record count in Iceberg
-    print(f"\n4. Verifying record count in '{TARGET_TABLE}'...")
-    spark.catalog.refreshTable(TARGET_TABLE)
-    final_count = spark.table(TARGET_TABLE).count()
+    print(f"\n4. Verifying record count in '{target_table}'...")
+    spark.catalog.refreshTable(target_table)
+    final_count = spark.table(target_table).count()
     newly_added = final_count - initial_count
     print(f"Post-streaming row count : {final_count:,}")
     print(f"New trade records ingested : {newly_added:,}")
@@ -139,13 +161,13 @@ def main() -> None:
             summary['total-records'] AS total_records,
             summary['added-records'] AS added_records,
             committed_at
-        FROM {TARGET_TABLE}.snapshots
+        FROM {target_table}.snapshots
         ORDER BY committed_at DESC
         LIMIT 3
     """).show(truncate=False)
 
     spark.stop()
-    print(f"--- Streaming Ingestion to Iceberg Succeeded Cleanly ---\n")
+    print(f"--- Streaming Ingestion to Iceberg Succeeded Cleanly ({target_table}) ---\n")
 
 
 if __name__ == "__main__":
