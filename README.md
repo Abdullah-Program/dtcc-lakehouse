@@ -377,50 +377,111 @@ In addition to batch end-of-day archives, DTCC disseminates live ticker updates 
 
 ---
 
-## 9. Repository Blueprint
+## 9. Executive Dashboards & Multi-Cloud Interoperability
 
-```text
-dtcc-lakehouse/
-├── .github/                      # CI/CD workflows and issue templates
-│   ├── workflows/ci.yml          # GitHub Actions linting and automated test runs
-│   └── ISSUE_TEMPLATE/ticket.md  # Standardized issue template
-├── docs/                         # Technical documentation and ADRs
-│   ├── adr/                      # Architecture Decision Records
-│   │   ├── 0001-table-format-iceberg.md
-│   │   ├── 0002-catalog-choice.md
-│   │   └── 0003-redpanda-for-kafka.md
-│   ├── data-notes.md             # Empirical findings on DTCC dataset columns & types
-│   ├── project-context.md        # AI assistant rules, constraints, and environment facts
-│   └── runbook.md                # Step-by-step operational runbook
-├── ingestion/                    # DTCC ingestion, exploratory scripts, and producers
-│   ├── inspect_dtcc.py           # Resolves DTCC bucket dynamically and downloads samples
-│   ├── explore_actions.py        # Explores action types and original ID distributions
-│   ├── explore_chains.py         # Traces trade lineage and parent-child ID ordering
-│   └── kafka_producer.py         # Streams DTCC messages into Redpanda
-├── spark_jobs/                   # PySpark Lakehouse pipeline jobs
-│   ├── common/                   # Shared utilities (SparkSession factory, schemas)
-│   │   └── spark_session.py      # Factory configuring Iceberg runtime, Kafka, & memory caps
-│   ├── bronze/                   # Raw Parquet ingestion jobs
-│   │   ├── read_raw_rates.py     # Schema validation and raw CSV inspection
-│   │   └── load_cumulative.py    # Bronze ingestion with Lakehouse audit metadata
-│   ├── silver/                   # Cleaning, standardizing, and typing jobs
-│   │   ├── clean_trades.py       # Snake_case, trade_key derivation, type casting
-│   │   └── load_silver_iceberg.py# Loads Silver Parquet into local.dtcc.silver_rates
-│   ├── gold/                     # Serving layer & trade corrections engine
-│   │   ├── apply_corrections.py  # Iceberg MERGE INTO stateful lifecycle reconciliation
-│   │   └── time_travel_demo.py   # Historical auditing and snapshot time travel
-│   ├── streaming/                # Real-time structured streaming jobs
-│   │   └── kafka_to_iceberg.py   # Redpanda -> PySpark -> Iceberg Silver ingestion
-│   ├── hello_spark.py            # Container environment verification script
-│   └── iceberg_smoke_test.py     # Iceberg 1.11.0 ACID smoke test
-├── tests/                        # Automated unit and integration tests
-│   ├── test_silver_clean.py      # Unit tests for Silver layer cleaning logic
-│   └── test_corrections.py       # Unit tests for Gold layer corrections & lifecycles
-├── warehouse/                    # (Gitignored) Local lakehouse storage (Bronze, Silver, Iceberg)
-├── docker-compose.yml            # Docker services (Spark, Redpanda, memory limits)
-├── progress.md                   # Chronological project tracker and environment specs
-└── README.md                     # Root project documentation and architectural guide
-```
+The DTCC Lakehouse is fully federated across leading enterprise cloud platforms (**Snowflake** and **Databricks**) without requiring physical data movement or vendor lock-in.
+
+### 1. Snowflake Live Deployed Executive Risk Dashboard
+- **Live Cloud Application URL:** [DTCC Risk Dashboard on Snowflake](https://app.snowflake.com/us-west-2/idb61338/#/streamlit-apps/DTCC_LAKEHOUSE.ANALYTICS.DTCC_RISK_DASHBOARD)
+- **Application Code:** [`apps/snowflake_streamlit_dashboard.py`](apps/snowflake_streamlit_dashboard.py)
+- **Features & Live Financial Metrics:**
+  - **Total Notional Exposure:** `$2.17 B` with DoD comparison badge.
+  - **Active Contracts:** `7` IRS and CDS contracts reconciled via automated CDC.
+  - **Weighted Avg Fixed Rate:** `3.70%` benchmark.
+  - **Multi-Currency Breakdown:** Visualized using interactive Altair bar charts across `USD`, `EUR`, `GBP`, and `CAD`.
+  - **Asset Class Distribution:** Interactive donut chart segmenting Interest Rate Swaps vs Corporate Single-Name Credit Default Swaps.
+  - **Live Audit Ledger:** Interactive DataFrame with client-side sorting, column filtering, and CSV download capabilities.
+
+![Snowflake Streamlit Dashboard](docs/images/snowflake_streamlit_dashboard.png)
+
+---
+
+### 2. Databricks Unity Catalog & Delta UniForm Visualizations
+- **Databricks SQL Specification:** [`sql/databricks/01_unity_catalog_iceberg.sql`](sql/databricks/01_unity_catalog_iceberg.sql)
+- **Databricks PySpark Notebook:** [`notebooks/databricks_dtcc_analytics.py`](notebooks/databricks_dtcc_analytics.py)
+- **Delta UniForm (Universal Format - Iceberg V2):**
+  Databricks writes Parquet data via Delta Lake, while enabling `'delta.universalFormat.enabledFormats' = 'iceberg'` and `'delta.enableIcebergCompatV2' = 'true'`. Databricks automatically generates Apache Iceberg metadata on every commit, enabling Trino, Snowflake, and PySpark to query the exact same table concurrently with zero data movement!
+- **Interactive Multi-Currency BI Chart:**
+
+![Databricks Multi-Currency Chart](docs/images/databricks_chart.png)
+
+---
+
+## 10. Comprehensive Repository File-by-File Catalog
+
+Every directory and source file in this repository serves a specific architectural role in the DTCC Open Financial Data Lakehouse:
+
+| Directory / File | Description & Architectural Purpose |
+| :--- | :--- |
+| **`apps/`** | **Executive Web Applications & Interactive Portals** |
+| `apps/snowflake_streamlit_dashboard.py` | Full-screen Streamlit in Snowflake (SiS) dashboard calculating live notional exposure, weighted fixed rates, and interactive Altair currency charts directly from Gold Iceberg contracts. |
+| **`ingestion/`** | **Data Extraction, API Crawling & Kafka Streaming Producers** |
+| `ingestion/inspect_dtcc.py` | Dynamic DTCC S3 bucket crawler; scrapes live daily cumulative swap archives and downloads sample payloads. |
+| `ingestion/explore_actions.py` | Statistical profiling of DTCC action types (`NEWT`, `MODI`, `TERM`, `CORR`, `EROR`) and parent-child linkage frequencies. |
+| `ingestion/explore_chains.py` | Recursive graph traversal tracing complex multi-hop trade modification and amendment chains. |
+| `ingestion/poll_ticker.py` | Polls DTCC live REST ticker endpoints for intraday trade dissemination slices. |
+| `ingestion/download_cumulative.py` | Automated CLI tool downloading end-of-day cumulative swap archives. |
+| `ingestion/kafka_producer.py` | High-throughput streaming producer streaming JSON trade messages into Redpanda Kafka topic `dtcc.rates.raw`. |
+| **`spark_jobs/`** | **PySpark Processing, Medallion Transforms & ACID Engine** |
+| `spark_jobs/common/spark_session.py` | Central SparkSession factory enforcing memory bounds, Ivy caching, S3 endpoint overrides, and Iceberg 1.11 runtime integration. |
+| `spark_jobs/common/schemas.py` | Shared PySpark `StructType` data contract definitions for Bronze, Silver, and Gold schemas. |
+| `spark_jobs/bronze/read_raw_rates.py` | Zero-data-loss raw ingestion verifying all 110 raw DTCC columns with strict string type preservation. |
+| `spark_jobs/bronze/load_cumulative.py` | Writes partitioned Bronze Snappy Parquet with metadata audit columns (`_ingested_at`, `_source_file`, `file_date`). |
+| `spark_jobs/silver/clean_trades.py` | Normalizes 110 raw columns into 117 typed columns, derives deterministic `trade_key`, parses ISO-8601 timestamps, and cleans capped notionals. |
+| `spark_jobs/silver/load_silver_iceberg.py` | Ingests Silver Parquet into Apache Iceberg table `dtcc.silver_rates` with identity date partitioning and snapshot creation. |
+| `spark_jobs/gold/apply_corrections.py` | ACID Trade Corrections Engine using Iceberg `MERGE INTO` with snapshot isolation and stateful lifecycle reconciliation (`ACTIVE`, `TERMINATED`, `CANCELLED`). |
+| `spark_jobs/gold/time_travel_demo.py` | Zero-copy time-travel audit querying historical snapshots (`VERSION AS OF` / `TIMESTAMP AS OF`) to inspect point-in-time trade states. |
+| `spark_jobs/streaming/kafka_to_iceberg.py` | Micro-batch PySpark Structured Streaming consumer reading Redpanda topic and writing append-only ACID commits to Iceberg on S3. |
+| `spark_jobs/maintenance/compact_files.py` | Compaction engine calling Iceberg `rewrite_data_files` procedure to eliminate small files and optimize query planning. |
+| `spark_jobs/maintenance/expire_snapshots.py` | Metadata retention job pruning obsolete snapshots, expired manifests, and unreferenced Parquet data files. |
+| `spark_jobs/maintenance/remove_orphans.py` | Table maintenance utility identifying and safely purging orphaned storage objects outside the Iceberg metadata tree. |
+| `spark_jobs/hello_spark.py` | Sanity check script validating Docker Spark container memory limits and cluster functionality. |
+| `spark_jobs/iceberg_smoke_test.py` | Local catalog smoke test verifying Iceberg table DDL, schema evolution, and commit metadata. |
+| `spark_jobs/polaris_smoke_test.py` | REST catalog smoke test verifying OAuth2 token negotiation and S3FileIO table creation against Apache Polaris. |
+| **`infra/`** | **Multi-Engine Infrastructure as Code (IaC) Configurations** |
+| `infra/garage/garage.toml` | High-performance, lightweight distributed S3 storage configuration with regional replication settings. |
+| `infra/garage/Garage-S3.cyberduckprofile` | Connection profile for visual Cyberduck S3 bucket management. |
+| `infra/polaris/bootstrap_catalog.py` | Automation script provisioning Polaris `dtcc_catalog` warehouse, principal roles, and OAuth2 client credentials. |
+| `infra/trino/jvm.config` | Garbage-collector and JVM heap tuning (`-Xmx1024M`, G1GC) ensuring Trino operates within strict laptop memory budgets. |
+| `infra/trino/catalog/polaris.properties` | Trino Iceberg REST catalog connector configuration enabling OAuth2 authentication and native S3 filesystem access. |
+| **`sql/`** | **Multi-Engine SQL Specifications & Query Libraries** |
+| `sql/snowflake/01_polaris_external_catalog.sql` | Production DDL configuring Snowflake External Volumes, Polaris REST Catalog integrations, and federated Iceberg queries. |
+| `sql/databricks/01_unity_catalog_iceberg.sql` | Databricks Unity Catalog DDL configuring Delta UniForm (Iceberg V2) compatibility and executive risk analytics. |
+| `sql/trino/01_verify_polaris_catalog.sql` | Catalog discovery query verifying schemas, namespaces, and tables registered in Apache Polaris. |
+| `sql/trino/02_financial_risk_summary.sql` | High-performance risk aggregations calculating multi-currency exposure and average fixed interest rates. |
+| `sql/trino/03_time_travel_audit.sql` | Auditing trade modifications and regulatory revisions using Trino's `FOR VERSION AS OF` syntax. |
+| `sql/trino/04_maintenance.sql` | Trino native S3 filesystem maintenance sweeping unreferenced files via `remove_orphan_files`. |
+| **`notebooks/`** | **Interactive Cloud Analytics Notebooks** |
+| `notebooks/databricks_dtcc_analytics.py` | Databricks-native PySpark notebook demonstrating Unity Catalog querying, Delta UniForm Iceberg compatibility, and `display()` visualizations. |
+| **`tests/`** | **Automated Data Quality & Schema Contract Test Suite** |
+| `tests/test_schemas.py` | Strict structural data contract assertions preventing schema drift across 17-column Gold and 117-column Silver contracts. |
+| `tests/test_silver_clean.py` | Unit tests validating snake_case conversion, timestamp parsing, and trade key derivation logic. |
+| `tests/test_corrections.py` | Unit tests validating window deduplication and trade lifecycle transition state machines. |
+| `tests/test_garage_s3.py` | Integration tests verifying S3 API functionality (Bucket creation, Multipart Upload, Object Get/List/Delete). |
+| `tests/conftest.py` | Pytest fixtures and test environment configuration. |
+| **`docs/`** | **Comprehensive Engineering Documentation, ADRs & Runbooks** |
+| `docs/architecture.md` | Architectural deep-dive detailing medallion schemas, Optimistic Concurrency Control (OCC), and transaction isolation. |
+| `docs/maintenance-lab.md` | Benchmark report documenting small-file compaction (50% file count reduction) and snapshot expiration metrics. |
+| `docs/runbook.md` | Production operational runbook covering cluster startup, streaming orchestration, failure recovery, and healthchecks. |
+| `docs/resume-talking-points.md` | Tailored senior data engineer interview guide covering Iceberg vs Delta, Polaris vs Hive, and table compaction. |
+| `docs/data-notes.md` | Empirical analysis of raw DTCC CFTC CSV columns, amendment indicators, and trade lifecycle anomalies. |
+| `docs/project-context.md` | Core engineering constraints, memory budgets, and architecture decisions. |
+| `docs/adr/0001-iceberg-over-delta.md` | Architecture Decision Record: Choosing Apache Iceberg over Delta Lake for open catalog interoperability. |
+| `docs/adr/0002-garage-instead-of-minio.md` | Architecture Decision Record: Adopting Garage S3 for sub-250MB memory footprint. |
+| `docs/adr/0003-redpanda-for-kafka.md` | Architecture Decision Record: Deploying Redpanda C++ broker over JVM Kafka. |
+| `docs/adr/0004-polaris-for-iceberg-rest-catalog.md` | Architecture Decision Record: Adopting Apache Polaris REST catalog with OAuth2 governance. |
+| `docs/adr/0005-trino-for-interactive-query-engine.md` | Architecture Decision Record: Deploying Trino 483 for interactive federated SQL queries. |
+| `docs/images/` | High-resolution production screenshots of Snowflake Streamlit dashboards and Databricks visualizations. |
+| **`scripts/`** | **Automated Healthchecks & Operational Scripts** |
+| `scripts/healthcheck.sh` | Bash script probing all 5 lakehouse services (Redpanda, Garage, Polaris, Trino, Spark) and reporting status. |
+| **Root Configurations** | **Environment, Dependency & Build Orchestration** |
+| `docker-compose.yml` | Declarative multi-container lakehouse infrastructure with strict per-service RAM and CPU limits. |
+| `pyproject.toml` | Python project metadata, Ruff linting configuration, and Pytest options. |
+| `requirements.txt` | Core Python dependencies for PySpark, Kafka, Boto3, and Streamlit. |
+| `Makefile` | Developer task runner automating formatting, linting, testing, and container management. |
+| `.env.example` | Template environment variables for S3 credentials, Polaris endpoints, and Kafka brokers. |
+| `progress.md` | Chronological project milestone log tracking completed phases and empirical findings. |
+| `README.md` | Master project portfolio documentation, architectural diagrams, and verification benchmarks. |
 
 ---
 
