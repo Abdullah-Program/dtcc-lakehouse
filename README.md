@@ -480,12 +480,11 @@ Every directory and source file in this repository serves a specific architectur
 | `requirements.txt` | Core Python dependencies for PySpark, Kafka, Boto3, and Streamlit. |
 | `Makefile` | Developer task runner automating formatting, linting, testing, and container management. |
 | `.env.example` | Template environment variables for S3 credentials, Polaris endpoints, and Kafka brokers. |
-| `progress.md` | Chronological project milestone log tracking completed phases and empirical findings. |
 | `README.md` | Master project portfolio documentation, architectural diagrams, and verification benchmarks. |
 
 ---
 
-## 10. Milestones & Implementation Roadmap
+## 11. Milestones & Implementation Roadmap
 
 - [x] **Phase 0: Environment Setup & DTCC Exploration**
   - Git repository structure, Docker PySpark container, and DTCC API exploration scripts.
@@ -530,7 +529,7 @@ Every directory and source file in this repository serves a specific architectur
 
 ---
 
-## 11. Local Quickstart & Operational Runbook
+## 12. Local Quickstart & Operational Runbook
 
 All operations execute inside resource-constrained Docker containers to isolate dependencies and prevent host memory exhaustion.
 
