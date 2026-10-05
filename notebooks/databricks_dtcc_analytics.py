@@ -1,4 +1,5 @@
 # Databricks notebook source
+# ruff: noqa: F821
 # MAGIC %md
 # MAGIC # 🏦 DTCC Financial Data Lakehouse on Databricks
 # MAGIC ### Multi-Engine Open Lakehouse: PySpark, Delta UniForm & Apache Iceberg

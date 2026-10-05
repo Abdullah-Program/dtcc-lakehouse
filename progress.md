@@ -6,6 +6,7 @@ Project 100% Complete & Delivered! 🎉
 - Multi-engine architecture operational: PySpark 4.1 + Trino 483 + Apache Polaris REST Catalog + Garage S3 + Redpanda Streaming.
 - Snowflake external catalog federation queries documented in `sql/snowflake/01_polaris_external_catalog.sql`.
 - Streamlit in Snowflake (SiS) live executive financial risk dashboard created and deployed in Snowflake Cloud (`apps/snowflake_streamlit_dashboard.py`).
+- Databricks Unity Catalog & Delta UniForm Iceberg integration verified with interactive visualizations (`sql/databricks/01_unity_catalog_iceberg.sql`, `notebooks/databricks_dtcc_analytics.py`).
 - Authored comprehensive architectural deep-dive report in `docs/architecture.md`.
 - Authored Data Engineering Resume & Interview Guide in `docs/resume-talking-points.md`.
 - Polished master `README.md` with badges, verified runbooks, and benchmark results.

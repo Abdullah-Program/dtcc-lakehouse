@@ -462,6 +462,8 @@ dtcc-lakehouse/
 - [x] **Phase 8: Cloud Interoperability & Portfolio Capstone**
   - Snowflake external catalog federation query specifications ([sql/snowflake/01_polaris_external_catalog.sql](sql/snowflake/01_polaris_external_catalog.sql)).
   - Streamlit in Snowflake (SiS) live executive financial risk dashboard ([apps/snowflake_streamlit_dashboard.py](apps/snowflake_streamlit_dashboard.py)).
+  - Databricks Unity Catalog & Delta UniForm Iceberg V2 integration ([sql/databricks/01_unity_catalog_iceberg.sql](sql/databricks/01_unity_catalog_iceberg.sql)).
+  - Databricks PySpark analytics notebook with built-in visualizations ([notebooks/databricks_dtcc_analytics.py](notebooks/databricks_dtcc_analytics.py)).
   - Architectural deep dive and transaction concurrency specifications ([docs/architecture.md](docs/architecture.md)).
   - Technical interview guide and resume talking points ([docs/resume-talking-points.md](docs/resume-talking-points.md)).
 
