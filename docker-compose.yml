@@ -81,6 +81,22 @@ services:
         limits:
           memory: 512M
 
+  trino:
+    image: trinodb/trino:latest
+    container_name: dtcc_trino
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./infra/trino/catalog:/etc/trino/catalog
+      - ./infra/trino/jvm.config:/etc/trino/jvm.config
+    deploy:
+      resources:
+        limits:
+          memory: 1500M
+    depends_on:
+      - polaris
+      - garage
+
 volumes:
   garage_meta:
   garage_data:

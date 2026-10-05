@@ -31,7 +31,8 @@ only in the last phase.
 - Phase 3 (Trade Corrections Engine) complete: Iceberg SQL MERGE INTO, stateful lifecycle reconciliation (ACTIVE/TERMINATED/CANCELLED), snapshot versioning, and Gold table (local.dtcc.gold_active_trades) verified.
 - Phase 4 (Streaming) complete: Redpanda Kafka broker deployed, lightweight stdlib Kafka producer (ingestion/kafka_producer.py), and PySpark Structured Streaming consumer (spark_jobs/streaming/kafka_to_iceberg.py) appending micro-batches into local.dtcc.silver_rates with snapshot lineage verified.
 - Phase 5 (Storage & Catalog Decoupling) complete: Garage S3 (250M limit, dtcc-lakehouse bucket) + Apache Polaris REST Catalog (512M limit, dtcc_catalog mapped to S3). Silver, Gold, and PySpark streaming pipeline migrated to S3 + Polaris REST catalog. Verified batch load, streaming append, MERGE INTO corrections, and zero-copy time travel. PR #39 merged to main, closing Issue #38.
-- Next: Advance to Phase 6 (Trino Query Engine & Table Maintenance Lab).
+- Phase 6 (Trino Query Engine & Table Maintenance Lab) complete: Deployed Trino 483 with 1500M limit and -Xmx1024M heap connected to Polaris REST Catalog and Garage S3. Verified interactive SQL queries and time travel across Silver & Gold tables. Built and executed Table Maintenance Lab: file compaction (50% small file reduction via binpack), snapshot expiration (purged 4 stale snapshots, 7 manifests, 4 obsolete data files), and orphan file audit over 22 S3 objects. Documented in ADR 0005 and docs/maintenance-lab.md.
+- Next: Open PR for Issue #40, merge to main, and advance to Phase 7 (CI/CD, Monitoring & Ops).
 
 ## 5. Environment
 - Windows host with 15.7 GB RAM (often 80% in use), 24-thread CPU. WSL2 Ubuntu is capped at about 7.6 GiB.
