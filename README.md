@@ -468,9 +468,9 @@ All operations execute inside resource-constrained Docker containers to isolate 
 docker compose up -d
 docker compose ps
 ```
-*(Runs `dtcc_spark` capped at 2500M and `dtcc_redpanda` capped at 750M)*.
+*(Runs `dtcc_spark` capped at 2500M, `dtcc_redpanda` capped at 750M, `dtcc_garage` S3 capped at 250M, and `dtcc_polaris` REST Catalog capped at 512M)*.
 
-### 3. Run the Batch Medallion Pipeline
+### 3. Run the Batch Medallion Pipeline (Decoupled S3 + Polaris REST)
 ```bash
 # 1. Ingest raw CSV to partitioned Bronze Parquet
 docker compose exec spark python3 /workspace/spark_jobs/bronze/load_cumulative.py
@@ -478,26 +478,33 @@ docker compose exec spark python3 /workspace/spark_jobs/bronze/load_cumulative.p
 # 2. Clean, derive trade_key, and produce Silver Parquet
 docker compose exec spark python3 /workspace/spark_jobs/silver/clean_trades.py
 
-# 3. Load Silver Parquet into Apache Iceberg table (local.dtcc.silver_rates)
-docker compose exec spark python3 /workspace/spark_jobs/silver/load_silver_iceberg.py
+# 3. Load Silver Parquet into Apache Iceberg table on Garage S3 (polaris.dtcc.silver_rates)
+docker compose exec spark python3 /workspace/spark_jobs/silver/load_silver_iceberg.py --catalog polaris
 
-# 4. Run the Trade Corrections Engine (MERGE INTO local.dtcc.gold_active_trades)
-docker compose exec spark python3 /workspace/spark_jobs/gold/apply_corrections.py
+# 4. Run the Trade Corrections Engine (MERGE INTO polaris.dtcc.gold_active_trades)
+docker compose exec spark python3 /workspace/spark_jobs/gold/apply_corrections.py --catalog polaris
 
 # 5. Run the Zero-Copy Time Travel Demonstration
-docker compose exec spark python3 /workspace/spark_jobs/gold/time_travel_demo.py
+docker compose exec spark python3 /workspace/spark_jobs/gold/time_travel_demo.py --catalog polaris
 ```
+*(Note: To run against the legacy local Hadoop catalog instead, substitute `--catalog local`)*.
 
 ### 4. Run the Real-Time Streaming Pipeline
 ```bash
 # 1. Produce live trade events into Redpanda (run in WSL terminal)
 python3 ingestion/kafka_producer.py
 
-# 2. Run PySpark Structured Streaming micro-batch ingestion into Iceberg
-docker compose exec spark python3 /workspace/spark_jobs/streaming/kafka_to_iceberg.py
+# 2. Run PySpark Structured Streaming micro-batch ingestion into Iceberg on S3
+docker compose exec spark python3 /workspace/spark_jobs/streaming/kafka_to_iceberg.py --catalog polaris
 ```
 
-### 5. Run Automated Unit Tests
+### 5. Verify Garage S3 Object Store
+```bash
+# Inspect bucket size and object count
+docker compose exec garage /garage bucket info dtcc-lakehouse
+```
+
+### 6. Run Automated Unit Tests
 ```bash
 docker compose exec spark python3 -m unittest discover -s /workspace/tests -p "test_*.py"
 ```

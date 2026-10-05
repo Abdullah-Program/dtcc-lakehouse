@@ -6,13 +6,23 @@ deduplicates the latest state per trade_key within the batch,
 and applies stateful reconciliation into 'local.dtcc.gold_active_trades'
 using Apache Iceberg's native SQL MERGE INTO.
 """
+import argparse
+import sys
 from pyspark.sql import DataFrame
 from pyspark.sql import functions as F
 from pyspark.sql.window import Window
 from spark_jobs.common.spark_session import get_spark_session
 
-SILVER_TABLE = "local.dtcc.silver_rates"
-GOLD_TABLE = "local.dtcc.gold_active_trades"
+
+def parse_args():
+    parser = argparse.ArgumentParser(description="Trade Corrections Engine (Gold Layer)")
+    parser.add_argument(
+        "--catalog",
+        choices=["polaris", "local"],
+        default="polaris",
+        help="Iceberg catalog to target (polaris REST or local Hadoop)",
+    )
+    return parser.parse_args()
 
 
 def map_lifecycle_status_expr() -> F.Column:
@@ -50,10 +60,10 @@ def deduplicate_latest_batch(df: DataFrame) -> DataFrame:
     )
 
 
-def create_gold_table_if_not_exists(spark) -> None:
+def create_gold_table_if_not_exists(spark, gold_table: str) -> None:
     """Create the Gold Iceberg table if it does not already exist."""
     spark.sql(f"""
-        CREATE TABLE IF NOT EXISTS {GOLD_TABLE} (
+        CREATE TABLE IF NOT EXISTS {gold_table} (
             trade_key STRING,
             current_dissemination_id STRING,
             action_type STRING,
@@ -75,13 +85,16 @@ def create_gold_table_if_not_exists(spark) -> None:
     """)
 
 
-def merge_into_gold(spark) -> None:
+def merge_into_gold(spark, silver_table: str, gold_table: str) -> None:
     """Execute Iceberg SQL MERGE INTO to reconcile latest trade states directly from Silver."""
-    create_gold_table_if_not_exists(spark)
+    create_gold_table_if_not_exists(spark, gold_table)
+
+    # Purge any invalid null trade_key rows
+    spark.sql(f"DELETE FROM {gold_table} WHERE trade_key IS NULL")
 
     # Use pure Iceberg SQL subquery to allow Catalyst to plan the v2 Iceberg source natively
     merge_sql = f"""
-        MERGE INTO {GOLD_TABLE} AS target
+        MERGE INTO {gold_table} AS target
         USING (
             SELECT * FROM (
                 SELECT 
@@ -109,7 +122,8 @@ def merge_into_gold(spark) -> None:
                         PARTITION BY trade_key 
                         ORDER BY dissemination_identifier DESC
                     ) as rn
-                FROM {SILVER_TABLE}
+                FROM {silver_table}
+                WHERE trade_key IS NOT NULL AND trade_key != ''
             ) WHERE rn = 1
         ) AS source
         ON target.trade_key = source.trade_key
@@ -171,33 +185,47 @@ def merge_into_gold(spark) -> None:
                 1
             )
     """
-    print(f"Executing MERGE INTO on {GOLD_TABLE}...")
+    print(f"Executing MERGE INTO on {gold_table}...")
     spark.sql(merge_sql)
     print("MERGE INTO operation completed.")
 
 
 def main() -> None:
-    print(f"\n--- Starting Trade Corrections Engine: Silver ({SILVER_TABLE}) -> Gold ({GOLD_TABLE}) ---")
-    spark = get_spark_session(app_name="DTCC-Gold-ApplyCorrections", enable_iceberg=True)
+    args = parse_args()
+    catalog = args.catalog
+    silver_table = f"{catalog}.dtcc.silver_rates"
+    gold_table = f"{catalog}.dtcc.gold_active_trades"
+
+    print(f"\n--- Starting Trade Corrections Engine: Silver ({silver_table}) -> Gold ({gold_table}) ---")
+    spark = get_spark_session(
+        app_name=f"DTCC-Gold-ApplyCorrections-{catalog}",
+        enable_iceberg=True,
+        enable_polaris=(catalog == "polaris"),
+    )
 
     # 1. Read cleaned Silver events from Iceberg table
-    print(f"1. Reading Silver events from {SILVER_TABLE}...")
-    df_silver = spark.table(SILVER_TABLE)
+    print(f"1. Reading Silver events from {silver_table}...")
+    df_silver = spark.table(silver_table)
     total_silver_events = df_silver.count()
     print(f"Loaded {total_silver_events:,} Silver events.")
 
     # 2. Compute unique trade keys count for verification
     print("2. Deduplicating to latest event per trade_key...")
-    unique_trades_count = df_silver.select("trade_key").distinct().count()
-    print(f"Found {unique_trades_count:,} unique trade keys across Silver.")
+    unique_trades_count = (
+        df_silver.filter(F.col("trade_key").isNotNull() & (F.col("trade_key") != ""))
+        .select("trade_key")
+        .distinct()
+        .count()
+    )
+    print(f"Found {unique_trades_count:,} unique valid trade keys across Silver.")
 
     # 3. Apply MERGE INTO against Gold Iceberg table
-    print(f"3. Applying MERGE INTO against {GOLD_TABLE}...")
-    merge_into_gold(spark)
+    print(f"3. Applying MERGE INTO against {gold_table}...")
+    merge_into_gold(spark, silver_table, gold_table)
 
     # 4. Verify Gold table record count
-    print(f"\n4. Verifying Gold table '{GOLD_TABLE}'...")
-    df_gold = spark.table(GOLD_TABLE)
+    print(f"\n4. Verifying Gold table '{gold_table}'...")
+    df_gold = spark.table(gold_table)
     gold_count = df_gold.count()
     print(f"Total trades in Gold table: {gold_count:,}")
     assert gold_count == unique_trades_count, (
@@ -231,11 +259,11 @@ def main() -> None:
             summary['total-records'] AS total_records,
             summary['added-records'] AS added_records,
             committed_at
-        FROM {GOLD_TABLE}.snapshots
+        FROM {gold_table}.snapshots
     """).show(truncate=False)
 
     spark.stop()
-    print(f"--- Trade Corrections Engine Finished Successfully ({GOLD_TABLE}) ---\n")
+    print(f"--- Trade Corrections Engine Finished Successfully ({gold_table}) ---\n")
 
 
 if __name__ == "__main__":

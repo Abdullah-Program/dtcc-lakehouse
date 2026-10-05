@@ -11,6 +11,7 @@ services:
       - SPARK_HOME=/opt/spark
       - PYTHONPATH=/opt/spark/python:/opt/spark/python/lib/py4j-0.10.9.9-src.zip:/workspace
       - AWS_REGION=garage
+      - AWS_ENDPOINT_URL=http://garage:3900
       - AWS_ACCESS_KEY_ID=GK135da1acc67448e5f988c2d9
       - AWS_SECRET_ACCESS_KEY=8ebd487cc54261411c33d336465f8a26ba58c064bddb3c56692189b2b4a21eba
       - AWS_REQUEST_CHECKSUM_CALCULATION=when_required
